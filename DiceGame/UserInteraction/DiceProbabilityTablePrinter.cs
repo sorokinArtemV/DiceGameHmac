@@ -1,4 +1,6 @@
+using ConsoleTableExt;
 using DiceGame.DiceLogic;
+using System.Globalization;
 
 namespace DiceGame.UserInteraction;
 
@@ -15,29 +17,30 @@ public sealed class DiceProbabilityTablePrinter
 
     public void ShowTable(List<Dice> diceList)
     {
-        _printer.Print("\nProbability table (Dice A wins over Dice B):\n");
+        _printer.Print("\nProbability of the win for the user:\n");
 
-        string header = "Dice\\Dice";
-        for (int i = 0; i < diceList.Count; i++)
-            header += $" D{i}  ";
-        
-        _printer.Print(header);
+        var tableData = new List<List<object>>();
 
-        _printer.Print(new string('-', header.Length));
-
-        for (int i = 0; i < diceList.Count; i++)
+        for (int userIdx = 0; userIdx < diceList.Count; userIdx++)
         {
-            string row = $"D{i}       ";
+            List<object> row = [diceList[userIdx].ToString()];
             
-            for (int j = 0; j < diceList.Count; j++)
-            {
-                string cell = i == j
-                    ? " --- "
-                    : $"{_evaluator.CalculateWinProbability(diceList[i], diceList[j]) * 100,3:F0}%";
-                row += cell + " ";
-            }
+            row.AddRange(diceList.Select((t, compIdx) => userIdx == compIdx
+                    ? 1.0 / 3.0
+                    : _evaluator.CalculateWinProbability(diceList[userIdx], t))
+                .Select(p => $"{p:F4}"));
 
-            _printer.Print(row.TrimEnd());
+            tableData.Add(row);
         }
+
+        List<string> headers = new List<string> { "User dice v" };
+        
+        headers.AddRange(diceList.Select(d => d.ToString()));
+
+        ConsoleTableBuilder
+            .From(tableData)
+            .WithColumn(headers)
+            .WithFormat(ConsoleTableBuilderFormat.Alternative)
+            .ExportAndWriteLine();
     }
 }
